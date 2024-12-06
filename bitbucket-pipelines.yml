@@ -1,0 +1,38 @@
+
+image: atlassian/default-image:4
+
+pipelines:
+  default:
+    - step:
+        name: 'Installing dependencies'
+        caches:
+          - node
+        script:
+          - curl ipinfo.io/ip
+          - npm install --legacy-peer-deps
+          - npm run postinstall
+          - npx ts-node -v
+          - npm install -g allure-commandline --save-dev
+        artifacts:
+          - node_modules/
+    - step:
+        name: 'Running smoke tests'
+        caches:
+          - node
+        script:
+          - npm install --legacy-peer-deps
+          - npx ts-node -v
+          - npm run bdd:web
+        continue-on-error: true
+        artifacts:
+          - output
+          - artifacts/**
+        after-script:
+          - npm install --legacy-peer-deps
+          - npm install -g allure-commandline --save-dev
+          - allure generate output --clean -o allure-report
+          - mkdir -p artifacts/allure-report
+          - cp -R allure-report/* artifacts/allure-report/
+          - echo "Allure report available in artifacts/allure-report"
+          - npm install -g ts-node
+          - ts-node ./src/utils/azure/uploadReport.ts
